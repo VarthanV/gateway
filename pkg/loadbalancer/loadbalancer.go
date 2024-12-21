@@ -15,16 +15,16 @@ const (
 	Random     Algorithm = "random"
 )
 
-type loadBalancer struct {
+type LoadBalancer struct {
 	current   atomic.Int32
 	algorithm Algorithm
 }
 
-func New(algo Algorithm) *loadBalancer {
-	return &loadBalancer{algorithm: algo}
+func New(algo Algorithm) *LoadBalancer {
+	return &LoadBalancer{algorithm: algo}
 }
 
-func (l *loadBalancer) GetNextServer(servers []*server.Server) (*server.Server, error) {
+func (l *LoadBalancer) GetNextServer(servers []*server.Server) (*server.Server, error) {
 	switch l.algorithm {
 	case RoundRobin:
 		return l.roundRobin(servers)
@@ -36,7 +36,7 @@ func (l *loadBalancer) GetNextServer(servers []*server.Server) (*server.Server, 
 	}
 }
 
-func (l *loadBalancer) roundRobin(servers []*server.Server) (*server.Server, error) {
+func (l *LoadBalancer) roundRobin(servers []*server.Server) (*server.Server, error) {
 	for i := 0; i < len(servers); i++ {
 		idx := int(l.current.Load()) % len(servers)
 		nextServer := servers[idx]
@@ -50,7 +50,7 @@ func (l *loadBalancer) roundRobin(servers []*server.Server) (*server.Server, err
 
 }
 
-func (l *loadBalancer) random(servers []*server.Server) (*server.Server, error) {
+func (l *LoadBalancer) random(servers []*server.Server) (*server.Server, error) {
 	idx := rand.Intn(len(servers) - 1)
 
 	s := servers[idx]
