@@ -14,11 +14,9 @@ import (
 )
 
 type backend struct {
-	methods     []string
 	servers     []*server.Server
 	middlewares []middlewares.MiddlewareFunc
 	lb          *loadbalancer.LoadBalancer
-	stripPath   bool
 	cfg         *config.ServiceConfig
 }
 
@@ -41,8 +39,6 @@ func New(cfg *config.Config) *Gateway {
 
 		b.lb = loadbalancer.New(loadbalancer.Algorithm(
 			cfg.LoadBalancing.Algorithm))
-		b.methods = c.Methods
-		b.stripPath = c.StripPath
 		b.middlewares = append(b.middlewares, middlewares.DefaultMiddlewares...)
 		b.cfg = &c
 
@@ -81,7 +77,7 @@ func (g *Gateway) HandleRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if b.stripPath {
+	if b.cfg.StripPath {
 		originalPath := r.URL.Path
 		trimmedPath := strings.TrimPrefix(originalPath, "/"+urlSplit[0])
 		if !strings.HasPrefix(trimmedPath, "/") {
