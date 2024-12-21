@@ -15,12 +15,6 @@ strip_path= true
 url = "http://localhost:5001"
 weight = 1
 
-[[routes.upstreams]]
-url = "http://localhost:5002"
-weight = 2
-
-
-
 [[routes]]
 path = "/service2"
 methods = ["GET"]
@@ -29,10 +23,6 @@ strip_path= true
 # Define upstreams for service2
 [[routes.upstreams]]
 url = "http://localhost:6001"
-weight = 1
-
-[[routes.upstreams]]
-url = "http://localhost:6002"
 weight = 1
 
 

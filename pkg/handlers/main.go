@@ -1,10 +1,14 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
+
+	"github.com/VarthanV/gateway/pkg/gateway"
 )
 
-func MainHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "You accessed: %s", r.URL.Path)
+func MainHandler(g *gateway.Gateway) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		g.HandleRequest(w, r)
+	}
+
 }
