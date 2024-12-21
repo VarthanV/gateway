@@ -12,6 +12,7 @@ type Config struct {
 	RateLimit     RateLimitConfig     `toml:"rate_limit"`
 	Logging       LoggingConfig       `toml:"logging"`
 	CORS          CORSConfig          `toml:"cors"`
+	JWTConfig     JWTConfig           `toml:"jwt"`
 }
 
 type ServerConfig struct {
@@ -48,6 +49,10 @@ type CORSConfig struct {
 	AllowedOrigins []string `toml:"allowed_origins"`
 	AllowedMethods []string `toml:"allowed_methods"`
 	AllowedHeaders []string `toml:"allowed_headers"`
+}
+
+type JWTConfig struct {
+	SecretKey string `toml:"secret_key"`
 }
 
 func (c *Config) Load(filename string) {

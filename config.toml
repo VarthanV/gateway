@@ -49,3 +49,6 @@ file = "/var/log/toy_gateway.log"
 allowed_origins = ["*"]
 allowed_methods = ["GET", "POST"]
 allowed_headers = ["Authorization", "Content-Type"]
+
+[jwt]
+secret_key=""
