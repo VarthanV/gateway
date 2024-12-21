@@ -1,0 +1,51 @@
+# General gateway configuration
+[server]
+host = "0.0.0.0"
+port = 8080
+
+# Define routes
+[[routes]]
+path = "/service1/*"
+methods = ["GET", "POST"]
+
+# Define upstreams for service1
+[[routes.upstreams]]
+url = "http://localhost:5001"
+weight = 1
+
+[[routes.upstreams]]
+url = "http://localhost:5002"
+weight = 2
+
+[[routes]]
+path = "/service2/*"
+methods = ["GET"]
+
+# Define upstreams for service2
+[[routes.upstreams]]
+url = "http://localhost:6001"
+weight = 1
+
+[[routes.upstreams]]
+url = "http://localhost:6002"
+weight = 1
+
+# Optional: Load balancing algorithm
+[load_balancing]
+algorithm = "round_robin" # Options: round_robin, random
+
+# Optional: Rate limiting
+[rate_limit]
+requests_per_minute = 100
+burst_limit = 20
+
+# Optional: Logging
+[logging]
+level = "info"
+file = "/var/log/toy_gateway.log"
+
+# Optional: CORS support
+[cors]
+allowed_origins = ["*"]
+allowed_methods = ["GET", "POST"]
+allowed_headers = ["Authorization", "Content-Type"]
