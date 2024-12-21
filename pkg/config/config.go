@@ -7,11 +7,12 @@ import (
 
 type Config struct {
 	Server        ServerConfig        `toml:"server"`
-	Routes        []RouteConfig       `toml:"routes"`
+	Services      []ServiceConfig     `toml:"routes"`
 	LoadBalancing LoadBalancingConfig `toml:"load_balancing"`
 	RateLimit     *RateLimitConfig    `toml:"rate_limit"`
 	Logging       *LoggingConfig      `toml:"logging"`
 	CORS          *CORSConfig         `toml:"cors"`
+	JWTConfig     *JWTConfig          `toml:"jwt"`
 }
 
 type ServerConfig struct {
@@ -19,12 +20,12 @@ type ServerConfig struct {
 	Port int    `toml:"port"`
 }
 
-type RouteConfig struct {
-	Path      string           `toml:"path"`
-	StripPath bool             `toml:"strip_path"`
-	Methods   []string         `toml:"methods"`
-	Upstreams []UpstreamConfig `toml:"upstreams"`
-	JWTConfig *JWTConfig       `toml:"jwt"`
+type ServiceConfig struct {
+	Path       string           `toml:"path"`
+	StripPath  bool             `toml:"strip_path"`
+	Methods    []string         `toml:"methods"`
+	Upstreams  []UpstreamConfig `toml:"upstreams"`
+	JWTEnabled bool             `toml:"jwt_enabled"`
 }
 
 type UpstreamConfig struct {

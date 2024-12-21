@@ -9,6 +9,7 @@ path = "/service1"
 methods = ["GET", "POST"]
 strip_path= true
 
+
 # Define upstreams for service1
 [[routes.upstreams]]
 url = "http://localhost:5001"
@@ -17,6 +18,8 @@ weight = 1
 [[routes.upstreams]]
 url = "http://localhost:5002"
 weight = 2
+
+
 
 [[routes]]
 path = "/service2"
@@ -32,6 +35,7 @@ weight = 1
 url = "http://localhost:6002"
 weight = 1
 
+
 # Optional: Load balancing algorithm
 [load_balancing]
 algorithm = "round_robin" # Options: round_robin, random
@@ -46,11 +50,10 @@ burst_limit = 20
 level = "info"
 file = "/var/log/toy_gateway.log"
 
-# Optional: CORS support
+[jwt]
+secret_key=""
+
 [cors]
 allowed_origins = ["*"]
 allowed_methods = ["GET", "POST"]
 allowed_headers = ["Authorization", "Content-Type"]
-
-[jwt]
-secret_key=""

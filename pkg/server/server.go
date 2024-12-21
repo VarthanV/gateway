@@ -1,6 +1,7 @@
 package server
 
 import (
+	"net/http/httputil"
 	"net/url"
 	"sync/atomic"
 
@@ -32,4 +33,8 @@ func (s *Server) GetHealth() bool {
 
 func (s *Server) GetURL() *url.URL {
 	return s.serverURL
+}
+
+func (s *Server) ReverseProxy() *httputil.ReverseProxy {
+	return httputil.NewSingleHostReverseProxy(s.GetURL())
 }
