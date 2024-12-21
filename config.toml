@@ -5,8 +5,9 @@ port = 8080
 
 # Define routes
 [[routes]]
-path = "/service1/*"
+path = "/service1"
 methods = ["GET", "POST"]
+strip_path= true
 
 # Define upstreams for service1
 [[routes.upstreams]]
@@ -18,8 +19,9 @@ url = "http://localhost:5002"
 weight = 2
 
 [[routes]]
-path = "/service2/*"
+path = "/service2"
 methods = ["GET"]
+strip_path= true
 
 # Define upstreams for service2
 [[routes.upstreams]]

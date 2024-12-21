@@ -3,6 +3,7 @@ package loadbalancer
 import (
 	"errors"
 	"math/rand"
+	"net/http/httputil"
 	"sync/atomic"
 
 	"github.com/VarthanV/gateway/pkg/server"
@@ -61,7 +62,6 @@ func (l *LoadBalancer) random(servers []*server.Server) (*server.Server, error) 
 	}
 
 	// loop through and return the first healthy server
-
 	for _, s := range servers {
 		if s.GetHealth() {
 			return s, nil
@@ -70,4 +70,8 @@ func (l *LoadBalancer) random(servers []*server.Server) (*server.Server, error) 
 
 	return nil, errors.New("no server is healthy")
 
+}
+
+func (l *LoadBalancer) ReverseProxy(s *server.Server) *httputil.ReverseProxy {
+	return httputil.NewSingleHostReverseProxy(s.GetURL())
 }

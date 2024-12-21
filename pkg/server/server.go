@@ -3,15 +3,23 @@ package server
 import (
 	"net/url"
 	"sync/atomic"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Server struct {
-	url       *url.URL
+	serverURL *url.URL
 	isHealthy atomic.Bool
 }
 
-func New(url string) *Server {
-	return &Server{}
+func New(serverURL string) *Server {
+	parsedURL, err := url.Parse(serverURL)
+	if err != nil {
+		logrus.Error("error in parsing url ", err)
+	}
+	return &Server{
+		serverURL: parsedURL,
+	}
 }
 
 func (s *Server) SetHealth(val bool) {
@@ -20,4 +28,8 @@ func (s *Server) SetHealth(val bool) {
 
 func (s *Server) GetHealth() bool {
 	return s.isHealthy.Load()
+}
+
+func (s *Server) GetURL() *url.URL {
+	return s.serverURL
 }
