@@ -38,7 +38,7 @@ burst_limit = 20
 # Optional: Logging
 [logging]
 level = "info"
-file = "/var/log/toy_gateway.log"
+file = "./toy_gateway.log"
 
 [jwt]
 secret_key=""

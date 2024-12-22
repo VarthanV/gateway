@@ -2,33 +2,45 @@ package gateway
 
 import (
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 
 	"github.com/VarthanV/gateway/pkg/config"
 	gatewayerrors "github.com/VarthanV/gateway/pkg/gateway-errors"
 	"github.com/VarthanV/gateway/pkg/loadbalancer"
+	"github.com/VarthanV/gateway/pkg/log"
 	"github.com/VarthanV/gateway/pkg/middlewares"
 	"github.com/VarthanV/gateway/pkg/server"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/time/rate"
 )
 
 type backend struct {
-	servers     []*server.Server
-	middlewares []middlewares.MiddlewareFunc
-	lb          *loadbalancer.LoadBalancer
-	cfg         *config.ServiceConfig
+	servers      []*server.Server
+	middlewares  []middlewares.MiddlewareFunc
+	lb           *loadbalancer.LoadBalancer
+	cfg          *config.ServiceConfig
+	rateLimiters map[string]*rate.Limiter
 }
 
 type Gateway struct {
-	servers map[string]backend
-	cfg     *config.Config
+	servers       map[string]backend
+	cfg           *config.Config
+	logFile       *os.File
+	logWriterChan chan log.Log
 }
 
 func New(cfg *config.Config) *Gateway {
+
+	var (
+		maxLogWritersAllowed = 100
+	)
+
 	g := Gateway{
-		servers: map[string]backend{},
-		cfg:     cfg,
+		servers:       map[string]backend{},
+		cfg:           cfg,
+		logWriterChan: make(chan log.Log, maxLogWritersAllowed), // Max writers allowed
 	}
 
 	for _, c := range cfg.Services {
@@ -41,8 +53,18 @@ func New(cfg *config.Config) *Gateway {
 			cfg.LoadBalancing.Algorithm))
 		b.middlewares = append(b.middlewares, middlewares.DefaultMiddlewares...)
 		b.cfg = &c
-
+		b.rateLimiters = make(map[string]*rate.Limiter)
 		g.servers[c.Path] = b
+	}
+
+	if cfg.Logging != nil {
+		f, err := os.OpenFile(cfg.Logging.File,
+			os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			logrus.Error("error in initializing log file ", err)
+		}
+
+		g.logFile = f
 	}
 
 	return &g
@@ -96,6 +118,7 @@ func (g *Gateway) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	server.ReverseProxy().ServeHTTP(w, r)
+
 }
 
 func (g *Gateway) getServicePaths(path string) []string {
