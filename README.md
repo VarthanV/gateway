@@ -79,3 +79,11 @@ The gateway and server management behavior is configured via environment variabl
 
 ## Contributing
 If you find a bug or want to add new features, feel free to open an issue or create a pull request
+
+## Roadmap
+
+[] Frontend Client
+
+[] Persist config in DB for high reliability
+
+[] Cleanups
