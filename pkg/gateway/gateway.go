@@ -15,6 +15,7 @@ import (
 	"github.com/VarthanV/gateway/pkg/middlewares"
 	"github.com/VarthanV/gateway/pkg/responsewriter"
 	"github.com/VarthanV/gateway/pkg/server"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/time/rate"
 )
@@ -209,50 +210,37 @@ func (g *Gateway) writeLog(i logInput) {
 
 }
 
-func (g *Gateway) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/servers", g.handleServers)
-	mux.HandleFunc("/servers/list", g.listServers)
-	mux.HandleFunc("/logs/list", g.listLogs)
-
+func (g *Gateway) RegisterRoutes(r *gin.Engine) {
+	r.POST("/servers", g.addServer)
+	r.PUT("/servers", g.updateServer)
+	r.DELETE("/servers", g.deleteServer)
+	r.GET("/servers", g.listServers)
+	r.GET("/logs", g.listLogs)
 }
 
-func (g *Gateway) handleServers(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		g.addServer(w, r)
-	case http.MethodDelete:
-		g.deleteServer(w, r)
-	case http.MethodPut:
-		g.updateServer(w, r)
-	default:
-		http.Error(w, "Unsupported HTTP method", http.StatusMethodNotAllowed)
-	}
-}
-
-func (g *Gateway) addServer(w http.ResponseWriter, r *http.Request) {
+func (g *Gateway) addServer(c *gin.Context) {
 	var newServer server.Server
-	if err := json.NewDecoder(r.Body).Decode(&newServer); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&newServer); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
 	// Add server logic here
-	path := r.URL.Query().Get("path")
+	path := c.DefaultQuery("path", "")
 	if backend, ok := g.servers[path]; ok {
 		backend.servers = append(backend.servers, &newServer)
 		g.servers[path] = backend
-		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(map[string]string{"message": "Server added"})
+		c.JSON(http.StatusCreated, gin.H{"message": "Server added"})
 	} else {
-		http.Error(w, "Service path not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Service path not found"})
 	}
 }
 
-func (g *Gateway) deleteServer(w http.ResponseWriter, r *http.Request) {
-	serverURL := r.URL.Query().Get("url")
-	path := r.URL.Query().Get("path")
+func (g *Gateway) deleteServer(c *gin.Context) {
+	serverURL := c.DefaultQuery("url", "")
+	path := c.DefaultQuery("path", "")
 	if path == "" || serverURL == "" {
-		http.Error(w, "Missing path or server URL", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing path or server URL"})
 		return
 	}
 
@@ -261,27 +249,26 @@ func (g *Gateway) deleteServer(w http.ResponseWriter, r *http.Request) {
 			if srv.GetURL().String() == serverURL {
 				backend.servers = append(backend.servers[:i], backend.servers[i+1:]...)
 				g.servers[path] = backend
-				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(map[string]string{"message": "Server deleted"})
+				c.JSON(http.StatusOK, gin.H{"message": "Server deleted"})
 				return
 			}
 		}
-		http.Error(w, "Server not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Server not found"})
 	} else {
-		http.Error(w, "Service path not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Service path not found"})
 	}
 }
 
-func (g *Gateway) updateServer(w http.ResponseWriter, r *http.Request) {
+func (g *Gateway) updateServer(c *gin.Context) {
 	var updatedServer server.Server
-	if err := json.NewDecoder(r.Body).Decode(&updatedServer); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&updatedServer); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
 	}
 
-	path := r.URL.Query().Get("path")
+	path := c.DefaultQuery("path", "")
 	if path == "" {
-		http.Error(w, "Missing path", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing path"})
 		return
 	}
 
@@ -290,21 +277,20 @@ func (g *Gateway) updateServer(w http.ResponseWriter, r *http.Request) {
 			if srv.GetURL() == updatedServer.GetURL() {
 				backend.servers[i] = &updatedServer
 				g.servers[path] = backend
-				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(map[string]string{"message": "Server updated"})
+				c.JSON(http.StatusOK, gin.H{"message": "Server updated"})
 				return
 			}
 		}
-		http.Error(w, "Server not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Server not found"})
 	} else {
-		http.Error(w, "Service path not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Service path not found"})
 	}
 }
 
-func (g *Gateway) listServers(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Query().Get("path")
+func (g *Gateway) listServers(c *gin.Context) {
+	path := c.DefaultQuery("path", "")
 	if path == "" {
-		http.Error(w, "Missing path", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing path"})
 		return
 	}
 
@@ -313,24 +299,23 @@ func (g *Gateway) listServers(w http.ResponseWriter, r *http.Request) {
 		for i, srv := range backend.servers {
 			servers[i] = srv.GetURL().String()
 		}
-		json.NewEncoder(w).Encode(servers)
+		c.JSON(http.StatusOK, servers)
 	} else {
-		http.Error(w, "Service path not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Service path not found"})
 	}
 }
 
-func (g *Gateway) listLogs(w http.ResponseWriter, r *http.Request) {
+func (g *Gateway) listLogs(c *gin.Context) {
 	if g.logFile == nil {
-		http.Error(w, "Log file not initialized", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Log file not initialized"})
 		return
 	}
 
 	logs, err := os.ReadFile(g.logFile.Name())
 	if err != nil {
-		http.Error(w, "Failed to read log file", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read log file"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(logs)
+	c.Data(http.StatusOK, "application/json", logs)
 }

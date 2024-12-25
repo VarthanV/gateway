@@ -16,8 +16,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host string `toml:"host"`
-	Port int    `toml:"port"`
+	Host        string `toml:"host"`
+	Port        int    `toml:"port"`
+	ManagerPort int    `toml:"manager_port"`
 }
 
 type ServiceConfig struct {
