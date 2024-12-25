@@ -1,6 +1,8 @@
 package gateway
 
 import (
+	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"regexp"
@@ -28,20 +30,31 @@ type Gateway struct {
 	servers       map[string]backend
 	cfg           *config.Config
 	logFile       *os.File
-	logWriterChan chan log.Log
+	logWriterChan chan logInput
 }
 
 func New(cfg *config.Config) *Gateway {
 
 	var (
 		maxLogWritersAllowed = 100
+		writersSem           = make(chan struct{}, maxLogWritersAllowed)
 	)
 
 	g := Gateway{
 		servers:       map[string]backend{},
 		cfg:           cfg,
-		logWriterChan: make(chan log.Log, maxLogWritersAllowed), // Max writers allowed
+		logWriterChan: make(chan logInput), // Max writers allowed
+
 	}
+
+	go func() {
+		logrus.Info("Logger worker started")
+		for val := range g.logWriterChan {
+			writersSem <- struct{}{}
+			g.writeLog(val)
+			<-writersSem
+		}
+	}()
 
 	for _, c := range cfg.Services {
 		b := backend{}
@@ -118,6 +131,11 @@ func (g *Gateway) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	server.ReverseProxy().ServeHTTP(w, r)
+	g.logWriterChan <- logInput{
+		Request:        r,
+		ResponseWriter: w,
+		Service:        urlSplit[0],
+	}
 
 }
 
@@ -128,4 +146,60 @@ func (g *Gateway) getServicePaths(path string) []string {
 	// Split the result if needed
 	parts := strings.Split(result, "|")
 	return parts
+}
+
+func (g *Gateway) writeLog(i logInput) {
+
+	l := log.Log{
+		Service: i.Service,
+		Path:    i.Request.URL.Path,
+	}
+
+	// Read the request body
+	requestBody, err := io.ReadAll(i.Request.Body)
+	if err != nil {
+		logrus.Error("error reading request body: ", err)
+		return
+	}
+
+	l.RequestBody = string(requestBody)
+
+	// Read request headers
+	requestHeaders, err := json.Marshal(i.Request.Header)
+	if err != nil {
+		logrus.Error("error marshalling request headers: ", err)
+		return
+	}
+	l.RequestHeaders = string(requestHeaders)
+
+	l.ResponseStatusCode = i.ResponseWriter.Header().Get("Status")
+	responseHeaders, err := json.Marshal(i.ResponseWriter.Header())
+	if err != nil {
+		logrus.Error("error marshalling response headers: ", err)
+		return
+	}
+	l.ResponseHeaders = string(responseHeaders)
+
+	// Capture the response body if possible
+	if rw, ok := i.ResponseWriter.(interface{ Body() []byte }); ok {
+		l.ResponseBody = string(rw.Body())
+	} else {
+		l.ResponseBody = "response body not accessible"
+	}
+
+	// Marshal the log entry
+	marshalledLog, err := json.Marshal(l)
+	if err != nil {
+		logrus.Error("error marshalling log: ", err)
+		return
+	}
+
+	// Write log to file
+	_, err = g.logFile.Write(append(marshalledLog, '\n'))
+	if err != nil {
+		logrus.Error("error writing log to file: ", err)
+	}
+
+	logrus.Info("Written log!")
+
 }
